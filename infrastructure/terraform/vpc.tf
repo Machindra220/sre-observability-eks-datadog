@@ -12,6 +12,7 @@ module "vpc" {
   # Cost saving: disable NAT gateway, use public subnets for nodes
   enable_nat_gateway = false
   enable_vpn_gateway = false
+  map_public_ip_on_launch = true
 
   # Required tags for EKS
   public_subnet_tags = {
