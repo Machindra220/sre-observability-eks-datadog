@@ -39,9 +39,12 @@ async def test_users():
         r = await client.get("/api/users")
     assert r.status_code == 200
 
-
 @pytest.mark.asyncio
 async def test_error_returns_error_status():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        r = await client.get("/api/error")
-    assert r.status_code in (400, 500)
+        # Try multiple times since /api/error is random
+        statuses = set()
+        for _ in range(10):
+            r = await client.get("/api/error")
+            statuses.add(r.status_code)
+        assert all(s in (400, 500) for s in statuses)

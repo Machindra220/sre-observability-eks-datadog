@@ -98,15 +98,12 @@ async def slow():
 
 @app.get("/api/error")
 async def error():
-    error_type = random.choice(["client", "server", "exception"])
+    error_type = random.choice(["client", "server", "server"])
 
     if error_type == "client":
         return JSONResponse(status_code=400, content={"error": "bad request", "type": "client"})
-    elif error_type == "server":
-        return JSONResponse(status_code=500, content={"error": "internal server error", "type": "server"})
     else:
-        raise ValueError("Simulated unhandled exception for observability testing")
-
+        return JSONResponse(status_code=500, content={"error": "internal server error", "type": "server"})
 
 @app.exception_handler(Exception)
 async def unhandled_exception(request: Request, exc: Exception):
