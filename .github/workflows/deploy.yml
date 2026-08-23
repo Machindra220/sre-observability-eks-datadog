@@ -1,0 +1,82 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: sre-demo-dev-ecr-api
+  EKS_CLUSTER: sre-demo-dev-eks-cluster
+  AWS_ACCOUNT_ID: 502274764708
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write 
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5 
+        with:
+          python-version: "3.12"
+
+      - name: Run tests
+        run: | 
+          cd app
+          pip install -r requirements.txt
+          python -m pytest tests/ -v 
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4 
+        with:
+          role-to-assume: arn:aws:iam::502274764708:role/github-actions-sre-demo
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd app
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name $EKS_CLUSTER
+
+      - name: Deploy to EKS
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          kubectl set image deployment/sre-demo-api \
+            sre-demo-api=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -n sre-demo
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/sre-demo-api \
+            -n sre-demo \
+            --timeout=120s
+
+      - name: Smoke test
+        run: |
+          LB=$(kubectl get svc sre-demo-api -n sre-demo \
+            -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          echo "Testing $LB"
+          sleep 10
+          curl -f http://${LB}/api/health
