@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sre-demo-api
+  namespace: sre-demo
+  labels:
+    app: sre-demo-api
+    environment: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sre-demo-api
+  template:
+    metadata:
+      labels:
+        app: sre-demo-api
+        environment: dev
+        apiVersion: "1.0.0"
+    spec:
+      containers:
+        - name: sre-demo-api
+          image: 502274764708.dkr.ecr.us-east-1.amazonaws.com/sre-demo-dev-ecr-api:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_TRACE_ENABLED
+              value: "false"
+            - name: DD_ENV
+              value: "dev"
+            - name: DD_SERVICE
+              value: "sre-demo-api"
+            - name: DD_VERSION
+              value: "1.0.0"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+    

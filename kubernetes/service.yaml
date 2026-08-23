@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sre-demo-api
+  namespace: sre-demo
+  labels:
+    app: sre-demo-api
+spec:
+  type: LoadBalancer
+  selector:
+    app: sre-demo-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
