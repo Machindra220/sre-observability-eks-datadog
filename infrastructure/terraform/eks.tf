@@ -7,6 +7,9 @@ module "eks" {
 
   cluster_endpoint_public_access = true
 
+  # Disable KMS encryption as this is demo, in prod need to handle with different approcah
+  cluster_encryption_config = {}
+
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.public_subnets
 
