@@ -27,3 +27,8 @@ venv/
 
 # Docker
 *.log
+
+# Datadog secrets
+**/datadog-secret*
+**/.dd_api_key
+**/.dd_app_key
