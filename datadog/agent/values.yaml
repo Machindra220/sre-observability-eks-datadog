@@ -4,7 +4,6 @@ datadog:
   appKeyExistingSecret: datadog-secret
 
   # Unified service tagging - correlates metrics, logs, traces
-  env: dev
   site: datadoghq.com
 
   # Container log collection
