@@ -3,7 +3,7 @@ name: Deploy
 on:
   push:
     branches: [main]
-    paths:  # Only trigger when these paths change
+    paths:  # Only trigger when these paths change just no change
       - 'app/**'
       - 'kubernetes/**'
       - '.github/workflows/**'
