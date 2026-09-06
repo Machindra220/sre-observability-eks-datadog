@@ -3,10 +3,12 @@ import random
 import time
 import uuid
 
+# Patch ddtrace BEFORE importing FastAPI - enables automatic instrumentation
+from ddtrace import patch, tracer
+patch(fastapi=True)
+
 import structlog
 import uvicorn
-from ddtrace import tracer
-from ddtrace.contrib.asgi import TraceMiddleware
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
@@ -21,7 +23,6 @@ structlog.configure(
 log = structlog.get_logger()
 
 app = FastAPI(title="SRE Demo API", version="1.0.0")
-app.add_middleware(TraceMiddleware)
 
 SERVICE_VERSION = "1.0.0"
 SERVICE_ENV = "dev"
@@ -33,14 +34,15 @@ async def request_middleware(request: Request, call_next):
     start = time.time()
     request.state.request_id = request_id
 
+    response = await call_next(request)
+
+    duration_ms = round((time.time() - start) * 1000, 2)
+
     # Get current trace context for log correlation
     span = tracer.current_span()
     trace_id = span.trace_id if span else None
     span_id = span.span_id if span else None
 
-    response = await call_next(request)
-
-    duration_ms = round((time.time() - start) * 1000, 2)
     log.info(
         "request",
         method=request.method,
