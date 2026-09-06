@@ -27,6 +27,23 @@ echo "=== Step 1: Provisioning AWS Infrastructure (Terraform) ==="
 cd "$PROJECT_ROOT/infrastructure/terraform"
 terraform apply -auto-approve
 
+echo "=== Step 1.5: Build and push Docker image to ECR ==="
+
+# Authenticate Docker to ECR
+echo "=== Step 2.5: Build and push image to ECR ==="
+aws ecr get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin \
+  502274764708.dkr.ecr.us-east-1.amazonaws.com
+
+# Build and push with both Git SHA and latest tags
+cd "$PROJECT_ROOT/app"
+GIT_SHA=$(git rev-parse --short HEAD)
+ECR_URL="502274764708.dkr.ecr.us-east-1.amazonaws.com/sre-demo-dev-ecr-api"
+docker build -t ${ECR_URL}:${GIT_SHA} -t ${ECR_URL}:latest .
+docker push ${ECR_URL}:${GIT_SHA}
+docker push ${ECR_URL}:latest
+cd "$PROJECT_ROOT"
+
 # -----------------------------------------------------------------------------
 # Step 2: Update kubeconfig
 # Adds the new EKS cluster credentials to ~/.kube/config
