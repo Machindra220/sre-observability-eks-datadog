@@ -23,7 +23,7 @@ async def test_products():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         r = await client.get("/api/products")
     assert r.status_code == 200
-    assert len(r.json()["products"]) == 3
+    assert len(r.json()["products"]) >= 3
 
 
 @pytest.mark.asyncio

@@ -33,6 +33,11 @@ async def request_middleware(request: Request, call_next):
     start = time.time()
     request.state.request_id = request_id
 
+    # Get current trace context for log correlation
+    span = tracer.current_span()
+    trace_id = span.trace_id if span else None
+    span_id = span.span_id if span else None
+
     response = await call_next(request)
 
     duration_ms = round((time.time() - start) * 1000, 2)
@@ -43,6 +48,8 @@ async def request_middleware(request: Request, call_next):
         status=response.status_code,
         duration_ms=duration_ms,
         request_id=request_id,
+        dd_trace_id=trace_id,
+        dd_span_id=span_id,
     )
     response.headers["X-Request-ID"] = request_id
     return response
@@ -65,6 +72,7 @@ async def products():
             {"id": 1, "name": "Widget A", "price": 9.99},
             {"id": 2, "name": "Widget B", "price": 19.99},
             {"id": 3, "name": "Widget C", "price": 4.99},
+            {"id": 4, "name": "Widget D", "price": 7.99},
         ]
     }
 
@@ -75,6 +83,7 @@ async def orders():
         "orders": [
             {"id": 101, "product_id": 1, "status": "shipped"},
             {"id": 102, "product_id": 3, "status": "pending"},
+            {"id": 103, "product_id": 4, "status": "shipped"},
         ]
     }
 
@@ -83,8 +92,9 @@ async def orders():
 async def users():
     return {
         "users": [
-            {"id": 1, "name": "Alice"},
+            {"id": 1, "name": "Ana"},
             {"id": 2, "name": "Bob"},
+            {"id": 3, "name": "Machindra"},
         ]
     }
 
