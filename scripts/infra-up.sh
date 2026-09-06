@@ -122,9 +122,34 @@ echo ""
 echo "--- Service (LoadBalancer URL) ---"
 kubectl get svc sre-demo-api -n sre-demo
 
+echo "=== Step 7: Install Datadog Agent ==="
+cd "$PROJECT_ROOT/datadog/agent"
+
+# Create datadog namespace and secret
+kubectl create namespace datadog --dry-run=client -o yaml | kubectl apply -f -
+kubectl create secret generic datadog-secret \
+  --from-literal=api-key=$DD_API_KEY \
+  --from-literal=app-key=$DD_APP_KEY \
+  --namespace datadog \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# Install Datadog via Helm
+helm repo add datadog https://helm.datadoghq.com
+helm repo update
+helm upgrade --install datadog-agent datadog/datadog \
+  --namespace datadog \
+  --values values.yaml \
+  --wait \
+  --timeout 5m
+
+cd "$PROJECT_ROOT"
+echo "=== Datadog Agent installed ==="
+
 echo ""
 echo "========================================"
 echo " Infrastructure is UP"
+echo " Kubernetes deployment deployed"
+echo " Datadog Agent installed"
 echo " Wait 2-3 mins for LoadBalancer URL"
 echo " Cost reminder: destroy when done!"
 echo "========================================"
