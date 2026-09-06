@@ -40,6 +40,12 @@ async def request_middleware(request: Request, call_next):
 
     # Get current trace context for log correlation
     span = tracer.current_span()
+    if span:
+        trace_id = span.trace_id & 0xFFFFFFFFFFFFFFFF  # Convert to 64-bit
+        span_id = span.span_id
+    else:
+        trace_id = None
+        span_id = None
     trace_id = span.trace_id if span else None
     span_id = span.span_id if span else None
 
@@ -50,8 +56,8 @@ async def request_middleware(request: Request, call_next):
         status=response.status_code,
         duration_ms=duration_ms,
         request_id=request_id,
-        dd_trace_id=trace_id,
-        dd_span_id=span_id,
+        **{"dd.trace_id": str(trace_id) if trace_id else None},
+        **{"dd.span_id": str(span_id) if span_id else None},
     )
     response.headers["X-Request-ID"] = request_id
     return response
