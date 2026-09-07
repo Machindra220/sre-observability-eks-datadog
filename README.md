@@ -150,10 +150,10 @@ sre-observability-eks-datadog/
 | Phase 7 | Datadog APM — distributed tracing, flame graphs | ✅ Complete |
 | Phase 8 | Log-trace correlation — connect logs to APM traces | ✅ Complete |
 | Phase 9 | Golden Signals dashboard — Traffic, Latency, Errors, Saturation | ✅ Complete |
-| Phase 10 | SLIs, SLOs, Error Budgets | 🔄 In Progress |
-| Phase 11 | Monitors and alerting | ⏳ Planned |
-| Phase 12 | Incident automation | ⏳ Planned |
-| Phase 13 | Failure injection and incident response | ⏳ Planned |
+| Phase 10 | SLIs, SLOs, Error Budgets | ✅ Complete |
+| Phase 11 | Monitors and alerting | ✅ Complete |
+| Phase 12 | Incident automation | ✅ Complete |
+| Phase 13 | Failure injection and incident response | 🔄 In Progress |
 | Phase 14 | Incident investigation exercises | ⏳ Planned |
 | Phase 15 | Datadog as Code (Terraform) | ⏳ Planned |
 | Phase 16 | Complete SRE platform summary | ⏳ Planned |
