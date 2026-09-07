@@ -6,6 +6,9 @@
 # =============================================================================
 set -e  # Exit immediately if any command fails
 
+# Load all secrets automatically
+source "$(dirname "$0")/load-secrets.sh"
+
 AWS_REGION="us-east-1"
 CLUSTER_NAME="sre-demo-dev-eks-cluster"
 
