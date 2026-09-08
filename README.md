@@ -153,12 +153,18 @@ sre-observability-eks-datadog/
 | Phase 10 | SLIs, SLOs, Error Budgets | ✅ Complete |
 | Phase 11 | Monitors and alerting | ✅ Complete |
 | Phase 12 | Incident automation | ✅ Complete |
-| Phase 13 | Failure injection and incident response | 🔄 In Progress |
-| Phase 14 | Incident investigation exercises | ⏳ Planned |
-| Phase 15 | Datadog as Code (Terraform) | ⏳ Planned |
-| Phase 16 | Complete SRE platform summary | ⏳ Planned |
+| Phase 13 | Failure injection and incident response | ✅ Complete |
+| Phase 14 | Incident investigation exercises | ✅ Complete |
+| Phase 15 | Datadog as Code (Terraform) | ✅ Complete |
+| Phase 16 | Complete SRE platform summary | ✅ Complete |
 
 ---
+
+## Note
+We have below states for the phases,
+1. ⏳ Planned
+2. 🔄 In Progress
+3. ✅ Complete
 
 ## Prerequisites
 

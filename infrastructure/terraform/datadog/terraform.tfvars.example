@@ -1,0 +1,21 @@
+# ─────────────────────────────────────────────────────────────
+# terraform.tfvars.example
+# Copy this file to terraform.tfvars and adjust values.
+# DO NOT commit terraform.tfvars — it is in .gitignore.
+#
+# Datadog API/APP keys are NOT here — they are fetched
+# automatically from AWS Secrets Manager (sre-demo/datadog).
+# No manual key export needed before terraform apply.
+# ─────────────────────────────────────────────────────────────
+
+# Must match the env tag configured on the Datadog agent Helm values
+env = "dev"
+
+# Must match the APM service name reported by ddtrace (DD_SERVICE)
+service = "sre-demo-api"
+
+# Kubernetes namespace where the app pods run
+kube_namespace = "sre-demo"
+
+# Team tag for grouping resources in Datadog
+team = "sre"
