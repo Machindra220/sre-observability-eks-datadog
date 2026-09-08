@@ -1,4 +1,3 @@
-
 # SRE Observability Platform — AWS EKS + Datadog
 
 A production-style SRE observability platform built on AWS EKS with Datadog,
@@ -18,6 +17,8 @@ Code → GitHub → CI/CD → Docker → ECR → EKS → Datadog
                                     Golden Signals → SLOs
                                               |
                                     Monitors → Alerts → Incidents
+                                              |
+                                    Chaos Validation → Datadog as Code
 ```
 
 ---
@@ -53,10 +54,12 @@ Docker Build  AWS ECR
          |      |      |
          +------+------+
                 |
-         Golden Signals
-         SLIs / SLOs
+         Golden Signals Dashboard
+         SLIs / SLOs / Error Budgets
          Monitors / Alerts
-         Incidents
+         Incident Automation
+         Chaos Validation
+         Terraform as Code
 ```
 
 ---
@@ -66,11 +69,11 @@ Docker Build  AWS ECR
 | Layer | Technology |
 |---|---|
 | Cloud | AWS (EKS, ECR, VPC, IAM, EC2, ELB) |
-| IaC | Terraform |
-| Containers | Docker, Kubernetes, Helm |
-| Observability | Datadog (Metrics, Logs, APM, Dashboards, Monitors) |
+| IaC | Terraform (AWS + Datadog providers) |
+| Containers | Docker, Kubernetes 1.32, Helm |
+| Observability | Datadog (Metrics, Logs, APM, Dashboards, Monitors, SLOs, Incidents) |
 | CI/CD | GitHub Actions |
-| Application | Python FastAPI |
+| Application | Python 3.12, FastAPI, ddtrace, structlog |
 | Scripting | Bash |
 | OS | Linux (WSL2 Ubuntu) |
 
@@ -81,55 +84,67 @@ Docker Build  AWS ECR
 ```text
 sre-observability-eks-datadog/
 ├── app/
-│   ├── src/main.py          # FastAPI application
-│   ├── tests/test_api.py    # Unit tests
-│   ├── Dockerfile           # Container definition
-│   ├── requirements.txt     # Python dependencies
-│   └── docker-compose.yml   # Local development
+│   ├── src/main.py              # FastAPI application
+│   ├── tests/test_api.py        # Unit tests
+│   ├── Dockerfile               # Container definition
+│   ├── requirements.txt         # Python dependencies
+│   └── docker-compose.yml       # Local development
 │
 ├── infrastructure/
 │   └── terraform/
-│       ├── versions.tf      # Provider version pins
-│       ├── variables.tf     # Configuration variables
-│       ├── outputs.tf       # Output values
-│       ├── vpc.tf           # VPC + subnets
-│       ├── eks.tf           # EKS cluster + node group
-│       └── ecr.tf           # Container registry
+│       ├── versions.tf          # Provider version pins
+│       ├── variables.tf         # Configuration variables
+│       ├── outputs.tf           # Output values
+│       ├── vpc.tf               # VPC + subnets
+│       ├── eks.tf               # EKS cluster + node group
+│       ├── ecr.tf               # Container registry
+│       └── datadog/             # Datadog as Code (Phase 15)
+│           ├── providers.tf
+│           ├── variables.tf
+│           ├── monitors.tf
+│           ├── slos.tf
+│           ├── dashboard.tf
+│           ├── outputs.tf
+│           └── terraform.tfvars.example
 │
 ├── kubernetes/
-│   ├── namespace.yaml       # sre-demo namespace
-│   ├── deployment.yaml      # App deployment + APM config
-│   ├── service.yaml         # LoadBalancer service
-│   ├── configmap.yaml       # App configuration
-│   └── hpa.yaml             # Horizontal pod autoscaler
+│   ├── namespace.yaml           # sre-demo namespace
+│   ├── deployment.yaml          # App deployment + APM config
+│   ├── service.yaml             # LoadBalancer service
+│   ├── configmap.yaml           # App configuration
+│   └── hpa.yaml                 # Horizontal pod autoscaler
 │
 ├── datadog/
 │   └── agent/
-│       ├── values.yaml      # Datadog Helm configuration
-│       ├── install.sh       # Agent installation script
-│       └── README.md        # Installation guide
+│       ├── values.yaml          # Datadog Helm configuration
+│       ├── install.sh           # Agent installation script
+│       └── README.md            # Installation guide
 │
 ├── scripts/
-│   ├── infra-up.sh          # Start everything (infra + app + datadog)
-│   └── infra-down.sh        # Stop everything safely
+│   ├── infra-up.sh              # Start everything (infra + app + datadog)
+│   ├── infra-down.sh            # Stop everything safely
+│   └── chaos/                   # Phase 13 failure injection scripts
+│       ├── common.sh
+│       ├── inject-high-error-rate.sh
+│       ├── inject-high-latency.sh
+│       ├── inject-pod-crash.sh
+│       ├── inject-availability-drop.sh
+│       ├── restore-all.sh
+│       └── run-all-scenarios.sh
 │
 ├── docs/
-│   ├── medium/              # Medium article drafts
-│   │   ├── 01-fastapi-observability-app.md
-│   │   ├── 02-eks-terraform-infrastructure.md
-│   │   ├── 03-deploy-to-eks.md
-│   │   ├── 04-github-actions-cicd.md
-│   │   ├── 05-datadog-eks-monitoring.md
-│   │   ├── 06-kubernetes-monitoring.md
-│   │   ├── 07-datadog-apm.md
-│   │   ├── 08-datadog-logs.md
-│   │   └── 09-golden-signals.md
-│   └── screenshots/         # Article screenshots by phase
+│   ├── medium/                  # All 16 Medium article drafts
+│   ├── runbooks/                # Monitor runbooks
+│   │   ├── api-availability.md
+│   │   ├── api-5xx.md
+│   │   ├── high-latency.md
+│   │   └── pod-restarts.md
+│   └── screenshots/             # Phase-by-phase screenshots
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml           # CI pipeline (PR)
-│       └── deploy.yml       # CD pipeline (main)
+│       ├── ci.yml               # CI pipeline (PR)
+│       └── deploy.yml           # CD pipeline (main)
 │
 ├── README.md
 └── CHANGELOG.md
@@ -153,18 +168,19 @@ sre-observability-eks-datadog/
 | Phase 10 | SLIs, SLOs, Error Budgets | ✅ Complete |
 | Phase 11 | Monitors and alerting | ✅ Complete |
 | Phase 12 | Incident automation | ✅ Complete |
-| Phase 13 | Failure injection and incident response | ✅ Complete |
+| Phase 13 | Failure injection and chaos engineering | ✅ Complete |
 | Phase 14 | Incident investigation exercises | ✅ Complete |
-| Phase 15 | Datadog as Code (Terraform) | ✅ Complete |
+| Phase 15 | Datadog as Code — Terraform | ✅ Complete |
 | Phase 16 | Complete SRE platform summary | ✅ Complete |
 
----
+### Phase Status Legend
+| Symbol | Meaning |
+|---|---|
+| ⏳ | Planned |
+| 🔄 | In Progress |
+| ✅ | Complete |
 
-## Note
-We have below states for the phases,
-1. ⏳ Planned
-2. 🔄 In Progress
-3. ✅ Complete
+---
 
 ## Prerequisites
 
@@ -184,7 +200,7 @@ AWS account with:
 
 Datadog account:
 - API Key (Organization Settings → API Keys)
-- APP Key (Organization Settings → Application Keys)
+- APP Key (Organization Settings → Application Keys) — enable all required scopes at creation
 
 ---
 
@@ -207,38 +223,39 @@ aws configure
 aws sts get-caller-identity
 ```
 
-### 3. Set Datadog keys
+### 3. Store Datadog keys in AWS Secrets Manager
 
 ```bash
-# Add to ~/.bashrc for persistence
-echo 'export DD_API_KEY="your-datadog-api-key"' >> ~/.bashrc
-echo 'export DD_APP_KEY="your-datadog-app-key"' >> ~/.bashrc
-source ~/.bashrc
+aws secretsmanager create-secret \
+  --name sre-demo/datadog2 \
+  --secret-string '{"DD_API_KEY":"<your-api-key>","DD_APP_KEY":"<your-app-key>"}'
 ```
 
 ### 4. Start everything
 
 ```bash
-# Creates infrastructure, deploys app, installs Datadog — one command
 ./scripts/infra-up.sh
 ```
 
-This takes ~20-25 minutes on first run (EKS cluster creation).
+Takes ~20–25 minutes on first run (EKS cluster creation).
 
 ### 5. Verify
 
 ```bash
-# Check all pods running
 kubectl get pods -A
-
-# Get app URL
 kubectl get svc sre-demo-api -n sre-demo
-
-# Test app
 curl http://<EXTERNAL-IP>/api/health
 ```
 
-### 6. Stop everything (saves AWS cost)
+### 6. Deploy Datadog resources via Terraform
+
+```bash
+cd infrastructure/terraform/datadog
+terraform init
+terraform apply
+```
+
+### 7. Stop everything (saves AWS cost)
 
 ```bash
 ./scripts/infra-down.sh
@@ -255,8 +272,8 @@ curl http://<EXTERNAL-IP>/api/health
 | GET /api/products | Normal business traffic | Metrics, traces |
 | GET /api/orders | Normal business traffic | Metrics, traces |
 | GET /api/users | Normal business traffic | Metrics, traces |
-| GET /api/slow | Latency simulation (2-5s) | High latency traces |
-| GET /api/error | Failure simulation (4xx/5xx) | Error traces |
+| GET /api/slow | Latency simulation (2–5s) | High latency traces |
+| GET /api/error | Failure simulation (5xx) | Error traces |
 
 ---
 
@@ -270,21 +287,11 @@ curl http://<EXTERNAL-IP>/api/health
 | ELB Load Balancer | Classic | ~$18/mo |
 | **Total** | | **~$106/mo** |
 
-**Cost tip:** Run `./scripts/infra-down.sh` after each session.
-EKS charges by the hour even when idle.
+**Cost tip:** Run `./scripts/infra-down.sh` after each session — EKS charges by the hour.
 
 ---
 
 ## Datadog Configuration
-
-### Agent Installation
-
-```bash
-export DD_API_KEY="your-api-key"
-export DD_APP_KEY="your-app-key"
-cd datadog/agent
-./install.sh
-```
 
 ### Features Enabled
 
@@ -299,25 +306,45 @@ cd datadog/agent
 | Log-trace correlation | ✅ |
 | Runtime metrics | ✅ |
 
-### Dashboards Created
+### Resources Created via Terraform
 
-| Dashboard | Purpose |
-|---|---|
-| SRE - Kubernetes Infrastructure | Node, pod, container health |
-| SRE — Golden Signals | Traffic, Latency, Errors, Saturation |
+| Resource | Type | Details |
+|---|---|---|
+| API Availability - No Traffic | Monitor P1 | requests < 1 in 5m |
+| High Error Rate | Monitor P2 | errors > 10 in 5m |
+| Pod Restart Rate | Monitor P2 | restarts > 3 in 15m |
+| SLO Error Budget Burn Rate | Monitor P2 | error rate > 1% |
+| High p99 Latency | Monitor P3 | p99 > 2s |
+| Availability SLO | SLO | 99% target, 30d window |
+| Latency SLO | SLO | 90% target, 30d window |
+| Golden Signals | Dashboard | Traffic, Latency, Errors, Saturation |
+
+---
+
+## Chaos Engineering
+
+Phase 13 failure injection scripts in `scripts/chaos/`:
+
+| Script | Failure Mode | Monitor Triggered |
+|---|---|---|
+| `inject-high-error-rate.sh` | Flood `/api/error` | P2 High Error Rate |
+| `inject-high-latency.sh` | Flood `/api/slow` | P3 High Latency |
+| `inject-pod-crash.sh` | kubectl command override → exit 1 | P2 Pod Restart |
+| `inject-availability-drop.sh` | Scale to 0 replicas | P1 Availability |
+| `restore-all.sh` | Recover all scenarios | — |
+
+All 5 monitors validated firing correctly against real failures.
 
 ---
 
 ## CI/CD Pipeline
 
 ### CI (Pull Requests)
-
 ```
 Lint → Tests → Docker Build → Security Scan (Trivy)
 ```
 
 ### CD (Push to main — app/** or kubernetes/**)
-
 ```
 Tests → Build → Push to ECR → Deploy to EKS → Rollout → Smoke Test
 ```
@@ -331,22 +358,11 @@ Authentication: AWS Access Keys via GitHub Secrets
 
 ```bash
 cd app
-
-# Create virtual environment
 python3.12 -m venv .venv
 source .venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Run tests
 python -m pytest tests/ -v
-
-# Run app locally
 uvicorn src.main:app --host 0.0.0.0 --port 8080 --reload
-
-# Or with Docker
-docker compose up
 ```
 
 ---
@@ -375,27 +391,26 @@ docker compose up
 | 7 | Adding Datadog APM to a Kubernetes Application | ✅ Written |
 | 8 | Centralized Kubernetes Logging with Datadog | ✅ Written |
 | 9 | Implementing the Four Golden Signals with Datadog | ✅ Written |
-| 10 | From Metrics to Reliability: SLIs, SLOs and Error Budgets | ⏳ Planned |
-| 11 | Building Actionable Datadog Monitors Without Alert Fatigue | ⏳ Planned |
-| 12 | Automating Incident Creation from Datadog Alerts | ⏳ Planned |
-| 13 | Breaking Production on Purpose: Failure Injection | ⏳ Planned |
-| 14 | Debugging a Kubernetes Incident Using Datadog | ⏳ Planned |
-| 15 | Turning Observability into Code: Datadog with Terraform | ⏳ Planned |
-| 16 | Building a Complete SRE Observability Pipeline | ⏳ Planned |
+| 10 | From Metrics to Reliability: SLIs, SLOs and Error Budgets | ✅ Written |
+| 11 | Building Actionable Datadog Monitors Without Alert Fatigue | ✅ Written |
+| 12 | Automating Incident Creation from Datadog Alerts | ✅ Written |
+| 13 | Breaking Production on Purpose: Chaos Engineering on EKS | ✅ Written |
+| 14 | Debugging a Kubernetes Incident Using Datadog | ✅ Written |
+| 15 | Turning Observability into Code: Datadog with Terraform | ✅ Written |
+| 16 | Building a Complete SRE Observability Platform — End-to-End Summary | ✅ Written |
 
 ---
 
 ## Lessons Learned
 
-- **patch(fastapi=True) before FastAPI import** — import order matters
-  for ddtrace monkey-patching
-- **dd.trace_id not dd_trace_id** — dot notation required for log-trace
-  correlation
-- **ECR latest tag must be managed explicitly** — terraform destroy
-  wipes images
+- **patch(fastapi=True) before FastAPI import** — import order matters for ddtrace
+- **dd.trace_id not dd_trace_id** — dot notation required for log-trace correlation
+- **ddtrace silently ignores a bad trace agent URL** — use kubectl patch with exit 1 for crash injection
+- **LoadBalancer service must be deleted before terraform destroy** — prevents orphaned ELBs
+- **Datadog APP key scopes must be set at creation** — key is only shown once
+- **burn_rate() monitor query requires a higher Datadog plan** — use error rate % as proxy
+- **Datadog org tag policies surface only at apply time** — check allowed keys before writing HCL
 - **t3.small is tight with Datadog** — agent consumes ~300MB RAM
-- **Always verify running container code** — Docker cache causes
-  stale deployments
 - **infra-up/down scripts save hours** — automate everything you repeat
 
 ---
@@ -409,4 +424,4 @@ docker compose up
 
 ---
 
-*Building in public — follow the journey through the Medium article series.*
+*All 16 phases complete. Built in public — follow the journey through the Medium article series.*
