@@ -419,9 +419,9 @@ uvicorn src.main:app --host 0.0.0.0 --port 8080 --reload
 
 **Machindranath Wagare**
 
-💼 ~10 years IT/SRE/Cloud Operations experience
-📧 [machindra.wagre@gmail.com](mailto:machindra.wagre@gmail.com)
-🐙 [github.com/Machindra220](https://github.com/Machindra220)
+- 💼 ~10 years IT/SRE/Cloud Operations experience
+- 📧 [machindra.wagre@gmail.com](mailto:machindra.wagre@gmail.com)
+- 🐙 [github.com/Machindra220](https://github.com/Machindra220)
 ---
 
 *All 16 phases complete. Built in public — follow the journey through the Medium article series.*
