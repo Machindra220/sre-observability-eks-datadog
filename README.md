@@ -1,7 +1,7 @@
 # SRE Observability Platform — AWS EKS + Datadog
 
 A production-style SRE observability platform built on AWS EKS with Datadog,
-documented as a 16-part Medium article series.
+documented as an 18-part Medium article series.
 
 ---
 
@@ -19,6 +19,8 @@ Code → GitHub → CI/CD → Docker → ECR → EKS → Datadog
                                     Monitors → Alerts → Incidents
                                               |
                                     Chaos Validation → Datadog as Code
+                                              |
+                                    Custom Domain → DNS Automation
 ```
 
 ---
@@ -60,6 +62,8 @@ Docker Build  AWS ECR
          Incident Automation
          Chaos Validation
          Terraform as Code
+                |
+         sre.machindra.online (Route 53)
 ```
 
 ---
@@ -68,8 +72,8 @@ Docker Build  AWS ECR
 
 | Layer | Technology |
 |---|---|
-| Cloud | AWS (EKS, ECR, VPC, IAM, EC2, ELB) |
-| IaC | Terraform (AWS + Datadog providers) |
+| Cloud | AWS (EKS, ECR, VPC, IAM, EC2, ELB, Route 53) |
+| IaC | Terraform (AWS + Datadog + Kubernetes providers) |
 | Containers | Docker, Kubernetes 1.32, Helm |
 | Observability | Datadog (Metrics, Logs, APM, Dashboards, Monitors, SLOs, Incidents) |
 | CI/CD | GitHub Actions |
@@ -98,14 +102,19 @@ sre-observability-eks-datadog/
 │       ├── vpc.tf               # VPC + subnets
 │       ├── eks.tf               # EKS cluster + node group
 │       ├── ecr.tf               # Container registry
-│       └── datadog/             # Datadog as Code (Phase 15)
+│       ├── datadog/             # Datadog as Code (Phase 15)
+│       │   ├── providers.tf
+│       │   ├── variables.tf
+│       │   ├── monitors.tf
+│       │   ├── slos.tf
+│       │   ├── dashboard.tf
+│       │   ├── outputs.tf
+│       │   └── terraform.tfvars.example
+│       └── dns/                 # Route 53 DNS as Code (Phase 18)
 │           ├── providers.tf
 │           ├── variables.tf
-│           ├── monitors.tf
-│           ├── slos.tf
-│           ├── dashboard.tf
-│           ├── outputs.tf
-│           └── terraform.tfvars.example
+│           ├── route53.tf
+│           └── outputs.tf
 │
 ├── kubernetes/
 │   ├── namespace.yaml           # sre-demo namespace
@@ -133,7 +142,7 @@ sre-observability-eks-datadog/
 │       └── run-all-scenarios.sh
 │
 ├── docs/
-│   ├── medium/                  # All 16 Medium article drafts
+│   ├── medium/                  # All 18 Medium article drafts
 │   ├── runbooks/                # Monitor runbooks
 │   │   ├── api-availability.md
 │   │   ├── api-5xx.md
@@ -172,6 +181,8 @@ sre-observability-eks-datadog/
 | Phase 14 | Incident investigation exercises | ✅ Complete |
 | Phase 15 | Datadog as Code — Terraform | ✅ Complete |
 | Phase 16 | Complete SRE platform summary | ✅ Complete |
+| Phase 17 | Custom domain setup — Route 53 + BigRock DNS | ✅ Complete |
+| Phase 18 | DNS automation — Terraform import + dynamic ELB hostname | ✅ Complete |
 
 ### Phase Status Legend
 | Symbol | Meaning |
@@ -255,11 +266,20 @@ terraform init
 terraform apply
 ```
 
-### 7. Stop everything (saves AWS cost)
+### 7. Sync custom domain DNS (optional)
+
+```bash
+cd infrastructure/terraform/dns
+terraform apply  # auto-updates sre.machindra.online → new ELB hostname
+```
+
+### 8. Stop everything (saves AWS cost)
 
 ```bash
 ./scripts/infra-down.sh
 ```
+
+> **Note:** Route 53 hosted zone is in separate Terraform state and is NOT destroyed by `infra-down.sh`. It costs $0.50/month. To stop DNS charges: `cd infrastructure/terraform/dns && terraform destroy`
 
 ---
 
@@ -322,6 +342,20 @@ terraform apply
 
 ---
 
+## Custom Domain
+
+`sre.machindra.online` → Route 53 → EKS LoadBalancer → FastAPI App
+
+| Resource | Details |
+|---|---|
+| Domain | machindra.online (BigRock) |
+| Subdomain | sre.machindra.online |
+| DNS | AWS Route 53 hosted zone |
+| Managed by | Terraform (infrastructure/terraform/dns/) |
+| CNAME | Dynamic — auto-updated via Kubernetes provider |
+
+---
+
 ## Chaos Engineering
 
 Phase 13 failure injection scripts in `scripts/chaos/`:
@@ -376,6 +410,7 @@ uvicorn src.main:app --host 0.0.0.0 --port 8080 --reload
 | ECR latest tag deleted on terraform destroy | ⚠️ Known | infra-up.sh rebuilds and pushes |
 | kube-state-metrics v1beta1 warnings | ℹ️ Harmless | Pin kube-state-metrics version |
 | Python 3.14 incompatible with ddtrace | ℹ️ Known | Use Python 3.12 |
+| WSL2 DNS returns 127.0.0.1 for custom domains | ℹ️ Known | Replace /etc/resolv.conf symlink with 8.8.8.8 |
 
 ---
 
@@ -399,6 +434,8 @@ uvicorn src.main:app --host 0.0.0.0 --port 8080 --reload
 | 14 | Debugging a Kubernetes Incident Using Datadog | ✅ Written |
 | 15 | Turning Observability into Code: Datadog with Terraform | ✅ Written |
 | 16 | Building a Complete SRE Observability Platform — End-to-End Summary | ✅ Written |
+| 17 | Mapping a Custom Domain to an EKS Application Using AWS Route 53 | ✅ Written |
+| 18 | Automating DNS with Terraform — Importing Route 53 and Dynamic ELB Updates | ✅ Written |
 
 ---
 
@@ -413,6 +450,10 @@ uvicorn src.main:app --host 0.0.0.0 --port 8080 --reload
 - **Datadog org tag policies surface only at apply time** — check allowed keys before writing HCL
 - **t3.small is tight with Datadog** — agent consumes ~300MB RAM
 - **infra-up/down scripts save hours** — automate everything you repeat
+- **WSL2 /etc/resolv.conf is a symlink** — replace with real file for custom domain DNS
+- **Route 53 generates new NS records on every hosted zone creation** — update registrar each time
+- **terraform import requires resource block in .tf first** — write config before importing
+- **Keep DNS Terraform state separate** — different lifecycle from app infrastructure
 
 ---
 
@@ -423,6 +464,7 @@ uvicorn src.main:app --host 0.0.0.0 --port 8080 --reload
 - 💼 ~10 years IT/SRE/Cloud Operations experience
 - 📧 [machindra.wagre@gmail.com](mailto:machindra.wagre@gmail.com)
 - 🐙 [github.com/Machindra220](https://github.com/Machindra220)
+
 ---
 
-*All 16 phases complete. Built in public — follow the journey through the Medium article series.*
+*18 phases complete. Built in public — follow the journey through the Medium article series.*
