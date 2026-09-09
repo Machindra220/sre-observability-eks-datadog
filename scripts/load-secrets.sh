@@ -10,7 +10,7 @@ echo "=== Loading secrets from AWS Secrets Manager ==="
 
 # Retrieves Datadog secrets
 DD_SECRETS=$(aws secretsmanager get-secret-value \
-  --secret-id "sre-demo/datadog" \
+  --secret-id "sre-demo/datadog2" \
   --region us-east-1 \
   --query 'SecretString' \
   --output text)

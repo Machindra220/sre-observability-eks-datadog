@@ -285,7 +285,8 @@ terraform apply
 | EC2 Worker Node | t3.small | ~$15/mo |
 | ECR Repository | Storage | ~$0.10/GB |
 | ELB Load Balancer | Classic | ~$18/mo |
-| **Total** | | **~$106/mo** |
+| Route 53 Hosted Zone | Optional | ~$0.50/mo |
+| **Total** | | **~$106.50/mo** |
 
 **Cost tip:** Run `./scripts/infra-down.sh` after each session — EKS charges by the hour.
 
