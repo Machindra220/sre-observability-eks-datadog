@@ -11,8 +11,15 @@ set -e  # Exit immediately if any command fails
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+
+# Destroying DNS resources first
+echo "=== Destroying DNS resources ==="
+cd "$PROJECT_ROOT/infrastructure/terraform/dns"
+terraform destroy -auto-approve
+cd "$PROJECT_ROOT"
+
 echo "========================================"
-echo " SRE Demo - Infrastructure Down"
+echo " SRE Demo - Taking Infrastructure Down"
 echo "========================================"
 
 # -----------------------------------------------------------------------------
